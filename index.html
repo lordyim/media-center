@@ -6,15 +6,18 @@
     <title>충현교회 미디어센터 통합신청</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f7f9; font-family: 'Pretendard', sans-serif; padding-bottom: 50px; }
-        .container { max-width: 600px; margin-top: 30px; }
+        body { background-color: #f4f7f9; font-family: 'Pretendard', -apple-system, sans-serif; padding-bottom: 50px; }
+        .container { max-width: 800px; margin-top: 30px; }
         .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .header-logo { text-align: center; margin-bottom: 25px; }
-        .nav-pills .nav-link { color: #555; border-radius: 10px; margin-bottom: 10px; }
-        .nav-pills .nav-link.active { background-color: #004a99; }
+        .nav-pills .nav-link { color: #555; border-radius: 10px; margin: 5px; cursor: pointer; font-weight: 500; }
+        .nav-pills .nav-link.active { background-color: #004a99; color: white; }
         .form-label { font-weight: 600; margin-top: 15px; color: #333; }
         .btn-submit { background-color: #004a99; border: none; padding: 12px; font-weight: bold; border-radius: 10px; }
-        .admin-section { display: none; }
+        .admin-controls { margin-bottom: 20px; text-align: center; }
+        .table { font-size: 0.85rem; vertical-align: middle; }
+        .table thead { background-color: #004a99; color: white; }
+        #loading { display: none; text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
@@ -22,114 +25,181 @@
 <div class="container">
     <div class="header-logo">
         <h2 style="color: #004a99; font-weight: bold;">충현교회 미디어센터</h2>
-        <p class="text-muted">통합 사역 신청 시스템</p>
+        <p class="text-muted">사역 신청 및 데이터 관리 시스템</p>
     </div>
 
-    <ul class="nav nav-pills nav-fill mb-4" id="pills-tab" role="tablist">
-        <li class="nav-item"><button class="nav-link active" onclick="showForm('영상광고')">영상광고</button></li>
-        <li class="nav-item"><button class="nav-link" onclick="showForm('영상제작')">영상제작</button></li>
-        <li class="nav-item"><button class="nav-link" onclick="showForm('사진촬영')">사진촬영</button></li>
-        <li class="nav-item"><button class="nav-link bg-light" onclick="showAdmin()">관리자</button></li>
+    <ul class="nav nav-pills nav-fill mb-4">
+        <li class="nav-item"><a class="nav-link active" id="tab-apply" onclick="showView('apply')">📋 신청하기</a></li>
+        <li class="nav-item"><a class="nav-link" id="tab-admin" onclick="showView('admin')">🔐 관리자 모드</a></li>
     </ul>
 
-    <div class="card p-4 shadow-sm" id="form-container">
-        <h4 id="form-title" class="mb-4">영상광고 상영 의뢰</h4>
-        <form id="mainForm">
-            <div id="dynamic-fields">
-                </div>
-            
-            <hr class="my-4">
-            <button type="submit" class="btn btn-primary w-100 btn-submit">신청하기</button>
-        </form>
+    <div id="apply-view">
+        <div class="admin-controls">
+            <div class="btn-group w-100">
+                <button class="btn btn-outline-primary active" id="btn-ad" onclick="setFormType('영상광고')">영상광고 상영</button>
+                <button class="btn btn-outline-primary" id="btn-prod" onclick="setFormType('영상제작')">사역영상 제작</button>
+                <button class="btn btn-outline-primary" id="btn-photo" onclick="setFormType('사진촬영')">사진촬영 지원</button>
+            </div>
+        </div>
+        
+        <div class="card p-4">
+            <h4 id="form-title" class="mb-4 text-center">영상광고 상영 의뢰</h4>
+            <form id="mainForm">
+                <div id="dynamic-fields">
+                    </div>
+                <hr class="my-4">
+                <button type="submit" class="btn btn-primary w-100 btn-submit" id="submitBtn">신청 완료하기</button>
+            </form>
+        </div>
     </div>
 
-    <div id="admin-container" class="admin-section card p-4">
-        <h4>사역 신청 관리 대시보드</h4>
-        <div class="table-responsive">
-            <table class="table table-hover mt-3">
-                <thead class="table-light">
-                    <tr><th>날짜</th><th>신청자</th><th>내용</th><th>상태</th></tr>
-                </thead>
-                <tbody id="admin-data">
-                    </tbody>
-            </table>
+    <div id="admin-view" style="display:none;">
+        <div class="admin-controls">
+            <div class="btn-group w-100 mb-3">
+                <button class="btn btn-secondary active" id="admin-ad" onclick="loadAdminData('영상광고')">광고내역</button>
+                <button class="btn btn-secondary" id="admin-prod" onclick="loadAdminData('영상제작')">제작내역</button>
+                <button class="btn btn-secondary" id="admin-photo" onclick="loadAdminData('사진촬영')">사진내역</button>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="refreshAdmin()">🔄 최신 데이터 불러오기</button>
+        </div>
+        <div class="card p-4">
+            <h5 id="admin-title" class="mb-3 text-primary">신청 현황</h5>
+            <div id="loading">데이터를 불러오는 중입니다...</div>
+            <div class="table-responsive">
+                <table class="table table-hover border">
+                    <thead id="table-head"></thead>
+                    <tbody id="admin-data-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // -----------------------------------------------------------
-    // ⚠️ 아래 URL을 아까 복사한 구글 웹 앱 URL로 반드시 수정하세요!
+    // 장로님께서 주신 구글 앱스 스크립트 URL
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxMN0qiIA5-xXQK6C1YLebkwdp9dT2t1a1iQitC4XI00AQtUfQNGE2fJnpn9_tGVPlRyw/exec";
-    // -----------------------------------------------------------
 
-    let currentType = '영상광고';
+    let currentFormType = '영상광고';
+    let currentAdminType = '영상광고';
 
-    function showForm(type) {
-        currentType = type;
-        document.getElementById('admin-container').style.display = 'none';
-        document.getElementById('form-container').style.display = 'block';
-        document.getElementById('form-title').innerText = type + " 의뢰 신청";
+    // 뷰 전환
+    function showView(view) {
+        document.getElementById('apply-view').style.display = (view === 'apply') ? 'block' : 'none';
+        document.getElementById('admin-view').style.display = (view === 'admin') ? 'block' : 'none';
+        document.getElementById('tab-apply').classList.toggle('active', view === 'apply');
+        document.getElementById('tab-admin').classList.toggle('active', view === 'admin');
+        if(view === 'admin') loadAdminData(currentAdminType);
+    }
+
+    // 신청서 타입 전환
+    function setFormType(type) {
+        currentFormType = type;
+        document.getElementById('form-title').innerText = type + " 신청";
+        ['btn-ad', 'btn-prod', 'btn-photo'].forEach(id => document.getElementById(id).classList.remove('active'));
+        if(type === '영상광고') document.getElementById('btn-ad').classList.add('active');
+        else if(type === '영상제작') document.getElementById('btn-prod').classList.add('active');
+        else document.getElementById('btn-photo').classList.add('active');
         renderFields(type);
     }
 
+    // 각 신청서별 필드 생성
     function renderFields(type) {
         const container = document.getElementById('dynamic-fields');
         let html = `
-            <div class="mb-3"><label class="form-label">1. 신청자(위원회/부서) 정보 *</label><input type="text" class="form-control" name="f1" required></div>
-            <div class="mb-3"><label class="form-label">2. 담당자 연락처 *</label><input type="text" class="form-control" name="f2" required placeholder="010-0000-0000"></div>
+            <div class="mb-3"><label class="form-label">신청 부서/위원회 *</label><input type="text" class="form-control" name="dept" required></div>
+            <div class="mb-3"><label class="form-label">담당자 및 연락처 *</label><input type="text" class="form-control" name="contact" required placeholder="홍길동 010-1234-5678"></div>
         `;
-
+        
         if (type === '영상광고') {
-            html += `
-                <div class="mb-3"><label class="form-label">3. 광고 제목(행사명)</label><input type="text" class="form-control" name="f3"></div>
-                <div class="mb-3"><label class="form-label">4. 광고 내용 요약(50자 이내)</label><textarea class="form-control" name="f4"></textarea></div>
-                <div class="mb-3"><label class="form-label">5. 시작일</label><input type="date" class="form-control" name="f5"></div>
-            `;
+            html += `<div class="mb-3"><label class="form-label">광고 행사명</label><input type="text" class="form-control" name="title"></div>
+                     <div class="mb-3"><label class="form-label">광고 내용 요약</label><textarea class="form-control" name="content" rows="3"></textarea></div>
+                     <div class="mb-3"><label class="form-label">상영 시작일</label><input type="date" class="form-control" name="start_date"></div>`;
         } else if (type === '영상제작') {
-            html += `
-                <div class="mb-3"><label class="form-label">3. 영상 종류</label>
-                    <select class="form-select" name="f3"><option>사역 홍보</option><option>인터뷰/다큐</option><option>교육용</option></select>
-                </div>
-                <div class="mb-3"><label class="form-label">4. 주요 내용/기획안</label><textarea class="form-control" name="f4" rows="4"></textarea></div>
-            `;
-        } else if (type === '사진촬영') {
-            html += `
-                <div class="mb-3"><label class="form-label">3. 촬영 일시</label><input type="datetime-local" class="form-control" name="f3"></div>
-                <div class="mb-3"><label class="form-label">4. 촬영 장소</label><input type="text" class="form-control" name="f4"></div>
-            `;
+            html += `<div class="mb-3"><label class="form-label">영상 제작 목적</label><input type="text" class="form-control" name="purpose"></div>
+                     <div class="mb-3"><label class="form-label">상세 기획 내용</label><textarea class="form-control" name="plan" rows="4"></textarea></div>`;
+        } else {
+            html += `<div class="mb-3"><label class="form-label">촬영 희망 일시</label><input type="datetime-local" class="form-control" name="dt"></div>
+                     <div class="mb-3"><label class="form-label">촬영 장소</label><input type="text" class="form-control" name="loc"></div>`;
         }
         container.innerHTML = html;
     }
 
-    // 데이터 전송
+    // 신청 데이터 전송
     document.getElementById('mainForm').onsubmit = async (e) => {
         e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerText = "서버에 기록 중...";
+        
         const formData = new FormData(e.target);
         const dataArray = Array.from(formData.values());
-        
-        if(!confirm("신청하시겠습니까?")) return;
 
         try {
-            const response = await fetch(GAS_URL, {
+            // mode: 'no-cors'는 보안상 응답을 읽지는 못하지만 데이터 전송은 가능하게 함
+            await fetch(GAS_URL, {
                 method: 'POST',
-                body: JSON.stringify({ type: currentType, data: dataArray })
+                mode: 'no-cors',
+                body: JSON.stringify({ type: currentFormType, data: dataArray })
             });
-            alert("성공적으로 접수되었습니다!");
+            alert("할렐루야! 신청이 정상적으로 접수되었습니다.");
             e.target.reset();
         } catch (error) {
-            alert("오류가 발생했습니다. 다시 시도해주세요.");
+            alert("데이터 전송 중 오류가 발생했습니다. 시트 연결을 확인해주세요.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "신청 완료하기";
         }
     };
 
-    function showAdmin() {
-        document.getElementById('form-container').style.display = 'none';
-        document.getElementById('admin-container').style.display = 'block';
-        alert("관리자 화면은 시트 데이터를 실시간으로 불러오도록 연동됩니다.");
+    // 관리자 데이터 불러오기 (GET)
+    async function loadAdminData(type) {
+        currentAdminType = type;
+        const tbody = document.getElementById('admin-data-body');
+        const thead = document.getElementById('table-head');
+        const loader = document.getElementById('loading');
+        
+        ['admin-ad', 'admin-prod', 'admin-photo'].forEach(id => document.getElementById(id).classList.remove('active'));
+        document.getElementById('admin-' + (type === '영상광고' ? 'ad' : type === '영상제작' ? 'prod' : 'photo')).classList.add('active');
+
+        tbody.innerHTML = "";
+        thead.innerHTML = "";
+        loader.style.display = "block";
+
+        try {
+            const res = await fetch(GAS_URL + "?type=" + encodeURIComponent(type));
+            const data = await res.json();
+            loader.style.display = "none";
+
+            if (data && data.length > 0) {
+                // 첫 행을 제목으로 사용
+                let hHtml = "<tr><th>순번</th>";
+                data[0].forEach((h, i) => hHtml += `<th>항목 ${i+1}</th>`);
+                hHtml += "</tr>";
+                thead.innerHTML = hHtml;
+
+                // 나머지 행 데이터 출력
+                for(let i=1; i<data.length; i++) {
+                    let rHtml = `<tr><td>${i}</td>`;
+                    data[i].forEach(cell => {
+                        let val = cell;
+                        if(String(cell).includes("T") && String(cell).includes("Z")) val = new Date(cell).toLocaleString();
+                        rHtml += `<td>${val}</td>`;
+                    });
+                    rHtml += "</tr>";
+                    tbody.innerHTML += rHtml;
+                }
+            } else {
+                tbody.innerHTML = "<tr><td colspan='10' class='text-center'>신청 내역이 없습니다.</td></tr>";
+            }
+        } catch (error) {
+            loader.innerText = "데이터를 가져오지 못했습니다. 앱 배포 설정을 확인하세요.";
+        }
     }
 
-    // 초기 실행
-    showForm('영상광고');
+    function refreshAdmin() { loadAdminData(currentAdminType); }
+
+    // 초기 화면 실행
+    setFormType('영상광고');
 </script>
 </body>
 </html>
